@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>El Bosque de los Procesos — Areandina</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --green:#7fb536; --gray:#606060; --magenta:#e6007e; --orange:#F59C2F; --blue:#2261DB;
+    --bg:#FAFAF9; --panel:#FFFFFF; --border:#606060; --border-soft:#D6D6D2;
+    --text:#232323; --text-dim:#606060;
+    --font:'JetBrains Mono', ui-monospace, monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:
+      linear-gradient(180deg, #EAF2E1 0px, #F3F7EE 640px, #FAFAF9 640px, #FAFAF9 100%);
+    font-family:var(--font); color:var(--text);
+  }
+
+  #hud{
+    position:fixed; top:0; left:0; right:0; z-index:60;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 20px; background:#FFFFFFEE; backdrop-filter:blur(3px);
+    border-bottom:1px solid var(--border); font-size:.76rem;
+  }
+  #hud .title{ font-weight:800; color:var(--gray); letter-spacing:.02em; }
+  #hud .title .ic{ color:var(--green); }
+  #hud .title .sub{ font-weight:400; color:var(--text-dim); font-size:.9em; margin-left:6px; }
+  #hud .prog{ color:var(--text-dim); }
+  #progBarOuter{ width:150px; height:9px; border:1px solid var(--border); background:#EFEFEC; }
+  #progBarInner{ height:100%; width:0%; background:var(--green); transition:width .5s; }
+
+  #startScreen, #endScreen{
+    position:fixed; inset:0; z-index:100; background:rgba(250,250,249,.98);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px;
+  }
+  #startScreen h1, #endScreen h1{ font-size:clamp(1.25rem,3.2vw,2rem); font-weight:800; color:var(--gray); line-height:1.4; }
+  #startScreen h1 .hi, #endScreen h1 .hi{ color:var(--magenta); }
+  #startScreen p, #endScreen p{ font-size:.9rem; color:var(--text-dim); max-width:48ch; margin-top:16px; line-height:1.6; }
+  .pixel-btn{
+    margin-top:28px; font-family:var(--font); font-weight:700; font-size:.78rem; color:#fff;
+    background:var(--magenta); border:none; padding:15px 24px; cursor:pointer;
+    box-shadow:4px 4px 0 var(--gray); transition:.1s;
+  }
+  .pixel-btn:hover{ transform:translate(-2px,-2px); box-shadow:6px 6px 0 var(--gray); }
+  .pixel-btn:active{ transform:translate(2px,2px); box-shadow:1px 1px 0 var(--gray); }
+  #startChar, #endChar{ margin-bottom:8px; }
+
+  #mapWrap{ position:relative; width:100%; padding-top:80px; }
+  svg#pathSvg{ position:absolute; top:0; left:0; width:100%; height:100%; z-index:1; }
+  .sprite{ position:absolute; z-index:2; pointer-events:none; }
+  .node{
+    position:absolute; z-index:5; width:50px; height:50px; transform:translate(-50%,-50%);
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.8rem;
+    border:2px solid var(--border); background:#fff; color:var(--text-dim);
+    box-shadow:2px 2px 0 rgba(0,0,0,.12);
+  }
+  .node.locked{ opacity:.5; }
+  .node.current{ background:var(--magenta); color:#fff; border-color:var(--magenta); cursor:pointer; animation:pulse 1.4s ease-in-out infinite; }
+  .node.done{ background:var(--green); color:#fff; border-color:var(--green); cursor:pointer; }
+  @keyframes pulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(230,0,126,.4);} 50%{ box-shadow:0 0 0 9px rgba(230,0,126,0);} }
+  .node-label{
+    position:absolute; top:100%; left:50%; transform:translateX(-50%); margin-top:5px;
+    font-size:.62rem; color:var(--text-dim); white-space:nowrap; background:#fffc; padding:2px 5px; z-index:5;
+    border:1px solid var(--border-soft);
+  }
+  #charToken{ position:absolute; z-index:8; transition:top .7s cubic-bezier(.4,.1,.2,1), left .7s cubic-bezier(.4,.1,.2,1); }
+  #charToken.fall{ animation:fall .5s; }
+  @keyframes fall{ 0%{transform:rotate(0);} 40%{transform:rotate(70deg) translateY(6px);} 100%{transform:rotate(0);} }
+  #charToken.flip{ transform:scaleX(-1); }
+
+  #modalOverlay{ position:fixed; inset:0; z-index:90; background:rgba(30,30,28,.5); display:none; align-items:center; justify-content:center; padding:20px; }
+  #modalOverlay.show{ display:flex; }
+  .sign{
+    position:relative; background:#fff; color:var(--text); max-width:540px; width:100%;
+    border:2px solid var(--border); box-shadow:8px 8px 0 rgba(0,0,0,.15);
+    padding:26px; max-height:86vh; overflow-y:auto;
+  }
+  .sign .ptitle{ position:absolute; top:-11px; left:16px; background:#fff; padding:0 8px; font-size:.63rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.06em; }
+  .sign h3{ font-size:1.02rem; margin-top:6px; color:var(--blue); }
+  .sign .def2{ margin-top:12px; font-size:.87rem; line-height:1.55; }
+  .sign .ex3{ margin-top:12px; font-size:.74rem; background:#F7F7F5; border:1px dashed var(--border-soft); padding:10px 12px; }
+  .sign .qsep{ margin:18px 0 10px; border-top:1px dashed var(--border-soft); padding-top:16px; }
+  .sign .qtext{ font-weight:700; font-size:.87rem; }
+  .opt{
+    display:block; width:100%; text-align:left; margin-top:10px; padding:11px 13px;
+    background:#fff; border:1.5px solid var(--border); font-family:var(--font); font-size:.82rem; cursor:pointer;
+    color:var(--text); transition:.12s;
+  }
+  .opt:hover{ border-color:var(--blue); background:#F0F4FD; }
+  .opt.wrong{ background:#FBE2DD; border-color:#c0392b; animation:shakeit .3s; }
+  .opt.correct{ background:#E7F2DB; border-color:var(--green); }
+  .opt.disabled{ pointer-events:none; opacity:.6; }
+  @keyframes shakeit{ 25%{transform:translateX(-6px);} 75%{transform:translateX(6px);} }
+  .feedback{ margin-top:12px; font-size:.76rem; min-height:18px; }
+  .feedback.bad{ color:#b23c2b; } .feedback.good{ color:var(--green); }
+  .sign .closeInfo{ margin-top:16px; text-align:right; }
+  .mini-btn{ font-family:var(--font); font-size:.7rem; background:var(--gray); color:#fff; border:none; padding:8px 14px; cursor:pointer; }
+
+  .recap-grid2{ display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px; margin-top:24px; max-width:1050px; text-align:left; }
+  .recap-item2{ border:1px solid var(--border-soft); background:#fff; padding:10px 12px; }
+  .recap-item2 .n2{ font-size:.74rem; font-weight:800; color:var(--blue); }
+  .recap-item2 .d2{ font-size:.68rem; color:var(--text-dim); margin-top:3px; }
+
+  footer{ text-align:center; padding:36px 20px 56px; font-size:.68rem; color:var(--text-dim); position:relative; z-index:3; }
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <div class="title"><span class="ic">▲</span> EL BOSQUE DE LOS PROCESOS <span class="sub">Areandina</span></div>
+  <div style="display:flex; align-items:center; gap:10px;">
+    <span class="prog" id="progText">Nodo 0 / 19</span>
+    <div id="progBarOuter"><div id="progBarInner"></div></div>
+  </div>
+</div>
+
+<div id="startScreen">
+  <div id="startChar"></div>
+  <h1>EL BOSQUE<br>DE LOS <span class="hi">PROCESOS</span></h1>
+  <p>Un explorador de Areandina debe cruzar el bosque hasta el Castillo de Procesos. Cada tramo esconde un concepto, con ejemplos de nuestra institución. Respóndelo bien para avanzar — si fallas, te resbalas, pero puedes volver a intentarlo.</p>
+  <button class="pixel-btn" id="startBtn">▶ INICIAR AVENTURA</button>
+</div>
+
+<div id="modalOverlay"><div class="sign" id="signContent"></div></div>
+
+<div id="mapWrap">
+  <svg id="pathSvg"><polyline id="pathLine" fill="none" stroke="#a9a9a4" stroke-width="4" stroke-dasharray="4 10" stroke-linecap="round"/></svg>
+  <div id="spritesLayer"></div>
+  <div id="nodesLayer"></div>
+  <div id="charToken"></div>
+</div>
+
+<div id="endScreen" style="display:none;">
+  <div id="endChar"></div>
+  <h1>¡LLEGASTE AL<br><span class="hi">CASTILLO DE PROCESOS</span>!</h1>
+  <p>Completaste el marco conceptual de Areandina. Aquí tienes los 19 términos como chuleta de referencia para el resto del taller.</p>
+  <div class="recap-grid2" id="recapGrid2"></div>
+</div>
+
+<footer>Cultura de Procesos · Taller interno · Fundación Universitaria del Área Andina</footer>
+
+<script>
+function px(rows, palette, size){
+  const cols = rows[0].length;
+  const wrap = document.createElement('div');
+  wrap.style.display = 'grid';
+  wrap.style.gridTemplateColumns = `repeat(${cols}, ${size}px)`;
+  wrap.style.gridTemplateRows = `repeat(${rows.length}, ${size}px)`;
+  wrap.style.lineHeight = 0;
+  rows.forEach(row=>{
+    for(const ch of row){
+      const cell = document.createElement('div');
+      cell.style.width = size+'px'; cell.style.height = size+'px';
+      cell.style.background = palette[ch] || 'transparent';
+      wrap.appendChild(cell);
+    }
+  });
+  return wrap;
+}
+
+const CHAR_PAL = { '.':'transparent', h:'#F59C2F', f:'#e8b98a', e:'#232323', s:'#2261DB', b:'#7fb536', p:'#606060', k:'#232323' };
+const CHAR_ROWS = [
+  '.'.repeat(1)+'h'.repeat(6)+'.'.repeat(1),
+  'h'.repeat(8),
+  '.'.repeat(1)+'f'.repeat(6)+'.'.repeat(1),
+  '.f.efe.f',
+  '.'.repeat(1)+'f'.repeat(6)+'.'.repeat(1),
+  '.'.repeat(1)+'s'.repeat(6)+'.'.repeat(1),
+  's'.repeat(8),
+  's'.repeat(1)+'b'.repeat(6)+'s'.repeat(1),
+  '.'.repeat(1)+'s'.repeat(6)+'.'.repeat(1),
+  '..s..s..',
+  '..p..p..',
+  '..k..k..'
+];
+function makeChar(size){ return px(CHAR_ROWS, CHAR_PAL, size); }
+
+const TREE_PAL = { '.':'transparent', t:'#606060', g:'#7fb536' };
+const TREE_ROWS = [
+  '.'.repeat(2)+'t'.repeat(2)+'.'.repeat(3),
+  '.'.repeat(1)+'g'.repeat(5)+'.'.repeat(1),
+  'g'.repeat(7),
+  '.'.repeat(1)+'g'.repeat(5)+'.'.repeat(1),
+  'g'.repeat(7),
+  '.'.repeat(2)+'t'.repeat(3)+'.'.repeat(2),
+  '.'.repeat(2)+'t'.repeat(3)+'.'.repeat(2)
+];
+function makeTree(size){ return px(TREE_ROWS, TREE_PAL, size); }
+
+const BUSH_PAL = { '.':'transparent', g:'#7fb536' };
+const BUSH_ROWS = [ '.'.repeat(1)+'g'.repeat(5)+'.'.repeat(1), 'g'.repeat(7), 'g'.repeat(7) ];
+function makeBush(size){ return px(BUSH_ROWS, BUSH_PAL, size); }
+
+const ROCK_PAL = { '.':'transparent', o:'#606060' };
+const ROCK_ROWS = [ '.'.repeat(1)+'o'.repeat(5)+'.'.repeat(1), 'o'.repeat(7), 'o'.repeat(7) ];
+function makeRock(size){ return px(ROCK_ROWS, ROCK_PAL, size); }
+
+const CASTLE_PAL = { '.':'transparent', k:'#606060', w:'#2261DB', d:'#F59C2F' };
+const CASTLE_ROWS = [
+  '.'.repeat(2)+'k'.repeat(2)+'.'.repeat(4)+'k'.repeat(2)+'.'.repeat(4)+'k'.repeat(2)+'.'.repeat(2),
+  '.'.repeat(2)+'k'.repeat(2)+'.'.repeat(4)+'k'.repeat(2)+'.'.repeat(4)+'k'.repeat(2)+'.'.repeat(2),
+  '.'.repeat(1)+'k'.repeat(4)+'.'.repeat(2)+'k'.repeat(4)+'.'.repeat(2)+'k'.repeat(4)+'.'.repeat(1),
+  '.'.repeat(1)+'k'.repeat(4)+'.'.repeat(2)+'k'.repeat(4)+'.'.repeat(2)+'k'.repeat(4)+'.'.repeat(1),
+  'k'.repeat(18),
+  'k'.repeat(1)+'.'.repeat(16)+'k'.repeat(1),
+  'k'.repeat(1)+'.'.repeat(6)+'w'.repeat(4)+'.'.repeat(6)+'k'.repeat(1),
+  'k'.repeat(1)+'.'.repeat(6)+'w'.repeat(4)+'.'.repeat(6)+'k'.repeat(1),
+  'k'.repeat(1)+'.'.repeat(16)+'k'.repeat(1),
+  'k'.repeat(1)+'.'.repeat(16)+'k'.repeat(1),
+  'k'.repeat(1)+'.'.repeat(7)+'d'.repeat(2)+'.'.repeat(7)+'k'.repeat(1),
+  'k'.repeat(1)+'.'.repeat(7)+'d'.repeat(2)+'.'.repeat(7)+'k'.repeat(1),
+  'k'.repeat(1)+'.'.repeat(7)+'d'.repeat(2)+'.'.repeat(7)+'k'.repeat(1),
+  'k'.repeat(18)
+];
+function makeCastle(size){ return px(CASTLE_ROWS, CASTLE_PAL, size); }
+
+/* ============ 19 conceptos con ejemplos de Areandina ============ */
+const nodesData = [
+  { title:"Proceso", def:"Conjunto de actividades interrelacionadas y secuenciales que reciben entradas, les agregan valor y entregan una salida útil para un cliente. En una institución multicampus, un proceso cruza sedes y modalidades, por lo que debe quedar documentado.", ex:"El \"Proceso de Admisión y Matrícula\": desde que un aspirante se contacta interesado en un programa, hasta que queda matriculado y con acceso al campus virtual.",
+    q:"¿Cuál opción describe mejor un PROCESO?", opts:["Un paso único y aislado que no se relaciona con nada más","Un conjunto de actividades relacionadas que transforman entradas en salidas de valor","Un documento que se archiva y nunca se vuelve a mirar"], correct:1 },
+  { title:"Subproceso", def:"Agrupación de actividades afines dentro de un proceso más grande. Resuelve una parte concreta del resultado final, pero todavía necesita varios pasos para completarse.", ex:"Dentro de Admisión y Matrícula, el subproceso \"Verificación de documentos del aspirante\": diploma de bachiller, cédula y resultados de pruebas Saber 11.",
+    q:"El subproceso 'Verificación de documentos del aspirante' pertenece a...", opts:["Al proceso de Admisión y Matrícula","A una tarea aislada sin proceso","Solo al manual de calidad"], correct:0 },
+  { title:"Procedimiento", def:"Descripción secuencial y detallada de cómo se ejecuta una actividad específica: responsable, sistema, tiempo y criterios de aprobación.", ex:"El procedimiento para validar el título de bachiller de un aspirante extranjero, que exige convalidación ante el Ministerio de Educación Nacional.",
+    q:"Un procedimiento se diferencia de un proceso porque...", opts:["Es más general y estratégico","Detalla el paso a paso, responsable y forma de ejecutar una actividad","Es exactamente lo mismo, solo cambia el nombre"], correct:1 },
+  { title:"Actividad / Tarea", def:"La acción concreta y puntual, el nivel más operativo del proceso. La ejecuta una persona en un momento determinado.", ex:"Cargar el escaneo de la cédula del aspirante en el sistema de información académico.",
+    q:"'Cargar el escaneo de la cédula del aspirante' es un ejemplo de...", opts:["Un proceso completo","Una actividad / tarea","Un indicador"], correct:1 },
+  { title:"Documentación", def:"Registrar por escrito, de forma clara, cómo se hacen las cosas, para que el conocimiento institucional no dependa de la memoria de una persona ni se pierda al cambiar de cargo o de sede.", ex:"El instructivo de \"Cómo registrar notas en el sistema académico\", igual para un docente nuevo en Bogotá, Pereira, Valledupar o virtual.",
+    q:"¿Por qué documentamos un proceso?", opts:["Para que no dependa solo de la memoria de una persona","Porque lo exige la ley en todos los casos","Para hacerlo ver más complicado"], correct:0 },
+  { title:"Manual de procesos", def:"Documento que compila todos los procesos, subprocesos y procedimientos de la organización, integrado dentro del Sistema Integrado de Gestión (SIG).", ex:"El Manual del SIG de Areandina, que reúne los procesos misionales, estratégicos y de apoyo de toda la institución multicampus.",
+    q:"El manual de procesos es...", opts:["Un procedimiento aislado","El compilado de todos los procesos, subprocesos y procedimientos","Un indicador de gestión"], correct:1 },
+  { title:"Actualización", def:"Revisar y modificar la documentación cuando cambia la forma de trabajar, dejando registro de versiones para saber qué cambió y cuándo.", ex:"Cuando el MEN expide una nueva resolución sobre registro calificado, el procedimiento de autoevaluación pasa de v3.0 a v4.0.",
+    q:"Cuando cambia la forma de trabajar, la documentación debe...", opts:["Quedarse igual para no confundir a nadie","Actualizarse y quedar con historial de versiones","Eliminarse por completo"], correct:1 },
+  { title:"Formato / Registro", def:"El formato es la plantilla vacía; el registro es esa misma plantilla ya diligenciada, con evidencia real: fecha, firma y responsable.", ex:"El formato \"Solicitud de homologación de créditos\" se vuelve registro cuando el estudiante lo diligencia y lo firma.",
+    q:"Una plantilla en blanco es un ______; la misma plantilla firmada es un ______.", opts:["Formato / Registro","Registro / Formato","Proceso / Procedimiento"], correct:0 },
+  { title:"Dueño de proceso", def:"Persona responsable de que el proceso funcione, se mida y se mejore, aunque muchas personas en distintas sedes ejecuten tareas dentro de él.", ex:"El Director de Registro y Control Académico es dueño del proceso de matrícula, aunque lo ejecuten coordinadores en las tres sedes.",
+    q:"¿Quién es responsable de que un proceso funcione, se mida y se mejore?", opts:["Cualquiera que lo ejecute alguna vez","El dueño del proceso","El cliente externo"], correct:1 },
+  { title:"Cliente interno/externo", def:"Quien recibe la salida del proceso. Interno: otra área de la institución. Externo: alguien fuera de Areandina.", ex:"Bienestar Universitario es cliente interno de Admisiones; el estudiante matriculado es cliente externo de Registro Académico.",
+    q:"Bienestar Universitario, al recibir el listado de estudiantes nuevos, es cliente ______ de Admisiones.", opts:["Externo","Interno","Ninguno de los dos"], correct:1 },
+  { title:"Mapa de procesos", def:"Representación gráfica de todos los procesos de la organización, agrupados en estratégicos, misionales y de apoyo, mostrando cómo se relacionan.", ex:"En el mapa de Areandina, Docencia e Investigación son misionales; TI y Gestión Humana son de apoyo; Direccionamiento Estratégico es estratégico.",
+    q:"El mapa de procesos sirve para...", opts:["Ver gráficamente cómo se relacionan todos los procesos de la institución","Reemplazar los procedimientos escritos","Medir indicadores financieros únicamente"], correct:0 },
+  { title:"Entradas y Salidas", def:"Todo proceso transforma entradas (información, recursos, solicitudes) en salidas (un resultado de valor).", ex:"En Investigación, la entrada es una propuesta de proyecto de un docente; la salida es un proyecto aprobado o una publicación indexada.",
+    q:"En el proceso de Investigación, una propuesta de proyecto presentada por un docente es la ______ y el proyecto aprobado es la ______.", opts:["Salida / Entrada","Entrada / Salida","Entrada / Procedimiento"], correct:1 },
+  { title:"Caracterización del proceso", def:"Ficha síntesis, de una sola hoja, que reúne objetivo, alcance, entradas, salidas, proveedores, clientes, responsable, riesgos e indicadores de un proceso.", ex:"La caracterización de Bienestar Universitario resume su objetivo (permanencia estudiantil), sus clientes y su indicador de participación.",
+    q:"La ficha de caracterización de un proceso reúne...", opts:["Solo el nombre del proceso","Objetivo, alcance, entradas, salidas, riesgos e indicadores en un solo documento","Únicamente el organigrama del área"], correct:1 },
+  { title:"Riesgo de proceso", def:"Evento o situación que, si ocurre, impide que el proceso logre su objetivo o afecta la calidad de su resultado.", ex:"En Aseguramiento de la Calidad, no actualizar la autoevaluación a tiempo puede derivar en la pérdida del registro calificado ante el MEN.",
+    q:"Un riesgo de proceso es...", opts:["Un evento que, si ocurre, impide lograr el objetivo del proceso","Un sinónimo de indicador","El nombre del dueño del proceso"], correct:0 },
+  { title:"Punto de control", def:"Mecanismo dentro del procedimiento diseñado para evitar que un riesgo se materialice, o para detectarlo a tiempo.", ex:"La revisión trimestral del cumplimiento de condiciones de calidad del MEN es un punto de control frente al riesgo de perder el registro calificado.",
+    q:"La revisión trimestral del cumplimiento de condiciones de calidad del MEN es un ejemplo de...", opts:["Una no conformidad","Un punto de control frente a un riesgo","Un cliente externo"], correct:1 },
+  { title:"No conformidad / Acción correctiva", def:"La no conformidad es el hallazgo de que algo no se hizo como estaba documentado. La acción correctiva es lo que evita que vuelva a pasar.", ex:"Una auditoría del SIG detecta que un programa no actualizó su syllabus (no conformidad); se reentrena a los coordinadores (acción correctiva).",
+    q:"Detectar en una auditoría que un programa no actualizó su syllabus según el nuevo currículo es...", opts:["Una no conformidad","Un indicador de gestión","Un mapa de procesos"], correct:0 },
+  { title:"Indicador (KPI)", def:"Medida cuantificable que permite saber, con datos y no con percepciones, si el proceso funciona bien.", ex:"La tasa de deserción estudiantil en primer semestre, o el porcentaje de aspirantes que matricula sin necesitar ayuda presencial.",
+    q:"Un indicador de proceso permite...", opts:["Saber con datos si el proceso funciona bien","Reemplazar al dueño del proceso","Documentar automáticamente"], correct:0 },
+  { title:"Mejora continua (PHVA)", def:"Ciclo de Planear, Hacer, Verificar y Actuar para optimizar procesos de forma constante, en vez de conformarse con 'siempre lo hemos hecho así'.", ex:"Alta deserción en primer semestre → se planea un programa de tutorías → se pilotea en una facultad → se verifica si bajó la deserción → se extiende a todas las facultades.",
+    q:"Después de 'Verificar' los resultados de un cambio, el siguiente paso del ciclo PHVA es...", opts:["Actuar","Planear otra vez sin revisar nada","Terminar el ciclo para siempre"], correct:0 },
+  { title:"Política vs Procedimiento", def:"La política es el qué y el por qué (principio general institucional); el procedimiento es el cómo (pasos concretos).", ex:"Política: \"Todo programa debe mantener vigente su registro calificado ante el MEN\". Procedimiento: los pasos de autoevaluación y radicación para lograrlo.",
+    q:"'Todo programa académico debe mantener vigente su registro calificado ante el MEN' es un ejemplo de...", opts:["Procedimiento","Política","Indicador"], correct:1 },
+];
+
+const N = nodesData.length;
+const VSTEP = 250, TOP_PAD = 130, BOTTOM_PAD = 420;
+const xPattern = [20,50,80,50];
+const coords = [];
+for(let i=0;i<N;i++){ coords.push({ x: xPattern[i%4], y: TOP_PAD + i*VSTEP }); }
+const castleCoord = { x:50, y: TOP_PAD + N*VSTEP + 40 };
+const totalHeight = castleCoord.y + BOTTOM_PAD;
+document.getElementById('mapWrap').style.height = totalHeight + 'px';
+
+const spritesLayer = document.getElementById('spritesLayer');
+const makers = [makeTree, makeBush, makeRock];
+for(let i=0;i<42;i++){
+  const m = makers[Math.floor(Math.random()*makers.length)];
+  const size = m===makeTree ? 7 : 6;
+  const el = m(size);
+  el.classList.add('sprite');
+  let xPct = Math.random()*100;
+  if(xPct>38 && xPct<62) xPct = xPct<50 ? xPct-26 : xPct+26;
+  el.style.left = `calc(${Math.max(2,Math.min(96,xPct))}% - 20px)`;
+  el.style.top = (Math.random()*totalHeight) + 'px';
+  el.style.opacity = .9;
+  spritesLayer.appendChild(el);
+}
+const castleMini = makeCastle(6);
+castleMini.classList.add('sprite');
+castleMini.style.left = `calc(${castleCoord.x}% - 54px)`;
+castleMini.style.top = (castleCoord.y-90)+'px';
+castleMini.id = 'castleMarker';
+spritesLayer.appendChild(castleMini);
+
+const svg = document.getElementById('pathSvg');
+svg.setAttribute('viewBox', `0 0 100 ${totalHeight}`);
+svg.setAttribute('preserveAspectRatio','none');
+svg.style.height = totalHeight+'px';
+const pts = coords.map(c=>`${c.x},${c.y}`).concat([`${castleCoord.x},${castleCoord.y}`]).join(' ');
+document.getElementById('pathLine').setAttribute('points', pts);
+document.getElementById('pathLine').setAttribute('vector-effect','non-scaling-stroke');
+
+const nodesLayer = document.getElementById('nodesLayer');
+const nodeEls = [];
+nodesData.forEach((d,i)=>{
+  const el = document.createElement('div');
+  el.className = 'node locked';
+  el.style.left = coords[i].x+'%';
+  el.style.top = coords[i].y+'px';
+  el.textContent = (i+1);
+  const label = document.createElement('div');
+  label.className = 'node-label';
+  label.textContent = d.title;
+  el.appendChild(label);
+  el.addEventListener('click', ()=> onNodeClick(i));
+  nodesLayer.appendChild(el);
+  nodeEls.push(el);
+});
+
+const charToken = document.getElementById('charToken');
+charToken.appendChild(makeChar(6));
+function placeCharAt(c){ charToken.style.left = `calc(${c.x}% - 24px)`; charToken.style.top = (c.y-70)+'px'; }
+placeCharAt({x:coords[0].x, y:coords[0].y});
+
+document.getElementById('startChar').appendChild(makeChar(8));
+document.getElementById('endChar').appendChild(makeCastle(9));
+
+let current = 0;
+const status = new Array(N).fill('locked');
+status[0] = 'current';
+const attempts = new Array(N).fill(0);
+
+function refreshNodes(){
+  nodeEls.forEach((el,i)=>{ el.classList.remove('locked','current','done'); el.classList.add(status[i]); });
+  document.getElementById('progText').textContent = `Nodo ${Math.min(current, N)} / ${N}`;
+  document.getElementById('progBarInner').style.width = (Math.min(current,N)/N*100)+'%';
+}
+refreshNodes();
+
+function onNodeClick(i){ if(status[i]==='locked') return; openSign(i); }
+
+function openSign(i){
+  const d = nodesData[i];
+  const wasDone = status[i]==='done';
+  const sign = document.getElementById('signContent');
+  sign.innerHTML = `
+    <div class="ptitle">parada ${i+1} / ${N}</div>
+    <h3>${d.title}</h3>
+    <div class="def2">${d.def}</div>
+    <div class="ex3"><b>Ejemplo:</b> ${d.ex}</div>
+    ${wasDone ? `<div class="closeInfo"><button class="mini-btn" id="closeBtn">Cerrar</button></div>` : `
+    <div class="qsep">
+      <div class="qtext">${d.q}</div>
+      <div id="optsWrap"></div>
+      <div class="feedback" id="fb"></div>
+    </div>`}
+  `;
+  document.getElementById('modalOverlay').classList.add('show');
+  if(wasDone){ document.getElementById('closeBtn').addEventListener('click', closeSign); return; }
+  const optsWrap = document.getElementById('optsWrap');
+  d.opts.forEach((opt, oi)=>{
+    const b = document.createElement('button');
+    b.className='opt'; b.textContent = opt;
+    b.addEventListener('click', ()=> answer(i, oi, b));
+    optsWrap.appendChild(b);
+  });
+}
+function closeSign(){ document.getElementById('modalOverlay').classList.remove('show'); }
+
+function answer(i, oi, btnEl){
+  const d = nodesData[i];
+  const fb = document.getElementById('fb');
+  if(oi === d.correct){
+    btnEl.classList.add('correct');
+    document.querySelectorAll('#optsWrap .opt').forEach(b=>b.classList.add('disabled'));
+    fb.textContent = '¡Correcto! El camino continúa...'; fb.className = 'feedback good';
+    status[i] = 'done'; current = i+1;
+    if(current < N) status[current] = 'current';
+    refreshNodes();
+    setTimeout(()=>{ closeSign(); advanceCharacter(i); }, 700);
+  } else {
+    attempts[i]++;
+    btnEl.classList.add('wrong');
+    charToken.classList.add('fall');
+    setTimeout(()=>charToken.classList.remove('fall'), 500);
+    if(attempts[i] >= 2){
+      fb.textContent = 'Te resbalaste otra vez. Esta es la respuesta correcta:'; fb.className = 'feedback bad';
+      document.querySelectorAll('#optsWrap .opt').forEach((b,idx)=>{ b.classList.add('disabled'); if(idx===d.correct) b.classList.add('correct'); });
+      setTimeout(()=>{
+        status[i] = 'done'; current = i+1;
+        if(current < N) status[current] = 'current';
+        refreshNodes(); closeSign(); advanceCharacter(i);
+      }, 1400);
+    } else {
+      fb.textContent = '¡Uy! Te resbalaste en el camino. Inténtalo de nuevo.'; fb.className = 'feedback bad';
+    }
+  }
+}
+
+function advanceCharacter(fromIndex){
+  const isLast = fromIndex === N-1;
+  const target = isLast ? castleCoord : coords[fromIndex+1];
+  if(target.x < coords[fromIndex].x) charToken.classList.add('flip'); else charToken.classList.remove('flip');
+  placeCharAt(target);
+  const scrollEl = isLast ? document.getElementById('castleMarker') : nodeEls[fromIndex+1];
+  scrollEl.scrollIntoView({behavior:'smooth', block:'center'});
+  if(isLast){ setTimeout(()=>{ document.getElementById('endScreen').style.display='flex'; }, 900); }
+}
+
+const recapGrid2 = document.getElementById('recapGrid2');
+nodesData.forEach(d=>{
+  const el = document.createElement('div');
+  el.className='recap-item2';
+  el.innerHTML = `<div class="n2">${d.title}</div><div class="d2">${d.def}</div>`;
+  recapGrid2.appendChild(el);
+});
+
+document.getElementById('startBtn').addEventListener('click', ()=>{
+  document.getElementById('startScreen').style.display='none';
+  nodeEls[0].scrollIntoView({behavior:'smooth', block:'center'});
+});
+</script>
+</body>
+</html>
