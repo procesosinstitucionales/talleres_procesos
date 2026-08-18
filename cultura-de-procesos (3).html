@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cultura de Procesos — Areandina</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FAFAF9;
+    --bg-panel:#FFFFFF;
+    --border:#606060;
+    --border-soft:#C7C7C7;
+    --text:#232323;
+    --text-dim:#606060;
+    --green:#7fb536;
+    --gray:#606060;
+    --magenta:#e6007e;
+    --orange:#F59C2F;
+    --blue:#2261DB;
+    --font:'JetBrains Mono', ui-monospace, monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{ background:var(--bg); color:var(--text); font-family:var(--font); line-height:1.6; }
+  ::selection{ background:var(--magenta); color:#fff; }
+  a{color:inherit;}
+
+  .grid-bg{
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:radial-gradient(var(--border-soft) 1px, transparent 1px);
+    background-size:26px 26px; opacity:.5;
+  }
+
+  .rail{
+    position:fixed; left:0; top:0; bottom:0; width:230px; z-index:50;
+    background:var(--bg-panel); border-right:1px solid var(--border);
+    padding:22px 0; overflow-y:auto;
+  }
+  .rail-head{ padding:0 20px 16px; border-bottom:1px dashed var(--border-soft); margin-bottom:10px; }
+  .rail-head .p1{ color:var(--text-dim); font-size:.7rem; }
+  .rail-head .p2{ font-weight:700; font-size:.82rem; }
+  .rail-head .p2 .cur{ display:inline-block; width:8px; height:14px; background:var(--magenta); vertical-align:middle; margin-left:2px; animation:blink 1s step-end infinite; }
+  @keyframes blink{ 50%{opacity:0;} }
+  .rail-item{
+    display:flex; align-items:center; gap:10px; padding:10px 20px; font-size:.76rem; color:var(--text-dim);
+    cursor:pointer; border-left:3px solid transparent; transition:.15s;
+  }
+  .rail-item:hover{ background:var(--bg); color:var(--text); }
+  .rail-item.active{ color:var(--text); border-left-color:var(--magenta); background:var(--bg); font-weight:600; }
+  @media (max-width:960px){ .rail{ position:static; width:100%; height:auto; border-right:none; border-bottom:1px solid var(--border); display:flex; overflow-x:auto; padding:12px 0;} .rail-head{display:none;} .rail-item{white-space:nowrap; border-left:none; border-bottom:3px solid transparent;} .rail-item.active{border-left:none; border-bottom-color:var(--magenta);} }
+
+  main{ position:relative; z-index:1; margin-left:230px; }
+  @media (max-width:960px){ main{ margin-left:0; } }
+
+  section{ min-height:100vh; padding:8vh 6vw; display:flex; flex-direction:column; justify-content:center; }
+
+  .eyebrow{ font-size:.7rem; color:var(--text-dim); margin-bottom:10px; }
+  .eyebrow .tag{ color:var(--magenta); }
+  h1{ font-size:clamp(2rem,5.4vw,3.4rem); font-weight:800; line-height:1.1; letter-spacing:-.01em; }
+  h2{ font-size:clamp(1.35rem,2.7vw,2rem); font-weight:700; max-width:22ch; }
+  p.lead{ color:var(--text-dim); font-size:.98rem; max-width:68ch; margin-top:14px; }
+
+  .panel{ position:relative; background:var(--bg-panel); border:1px solid var(--border); padding:22px 24px; margin-top:6px; }
+  .panel .ptitle{ position:absolute; top:-11px; left:14px; background:var(--bg-panel); padding:0 8px; font-size:.66rem; color:var(--text-dim); letter-spacing:.06em; text-transform:uppercase; }
+
+  #hero{ align-items:flex-start; }
+  .prompt{ font-size:.82rem; color:var(--green); }
+  .prompt .path{ color:var(--blue); }
+  .hero-sub{ margin-top:20px; max-width:60ch; color:var(--text-dim); }
+  .hero-meta{ margin-top:32px; display:flex; gap:0; border:1px solid var(--border); flex-wrap:wrap; }
+  .hero-meta div{ padding:14px 24px; border-right:1px solid var(--border); font-size:.7rem; color:var(--text-dim); }
+  .hero-meta div:last-child{ border-right:none; }
+  .hero-meta b{ display:block; font-size:1.25rem; color:var(--text); }
+  .scroll-cue{ margin-top:40px; font-size:.7rem; color:var(--text-dim); }
+
+  .funnel{ display:flex; align-items:stretch; gap:0; margin-top:34px; flex-wrap:wrap; }
+  .fbox{ font-weight:700; text-align:center; background:var(--bg-panel); border:1.5px solid var(--border); color:var(--text-dim); cursor:pointer; transition:.2s; display:flex; align-items:center; justify-content:center; padding:0 16px; }
+  #f0{ width:210px; height:110px; font-size:1.02rem; }
+  #f1{ width:180px; height:92px; font-size:.9rem; margin-top:9px; }
+  #f2{ width:150px; height:76px; font-size:.82rem; margin-top:17px; }
+  #f3{ width:120px; height:60px; font-size:.72rem; margin-top:25px; }
+  .fbox:hover{ border-color:var(--blue); color:var(--text); }
+  .fbox.active{ background:var(--blue); border-color:var(--blue); color:#fff; }
+  .farrow{ align-self:center; color:var(--text-dim); padding:0 8px; }
+  @media (max-width:700px){ .funnel{flex-direction:column; align-items:center;} .farrow{transform:rotate(90deg);} #f0,#f1,#f2,#f3{margin-top:0; width:min(80vw,280px);} }
+
+  .detail-panel{ margin-top:30px; max-width:70ch; border-left:3px solid var(--blue); }
+  .detail-panel h3{ font-size:1.1rem; color:var(--blue); margin-bottom:8px; }
+  .detail-panel .def{ margin-bottom:12px; font-size:.92rem; }
+  .detail-panel .ex{ font-size:.8rem; color:var(--text-dim); background:var(--bg); border:1px dashed var(--border-soft); padding:10px 12px; }
+  .detail-panel .ex b{ color:var(--text); display:block; font-size:.64rem; text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px; }
+
+  .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; margin-top:30px; max-width:1050px; }
+  .flip{ perspective:1200px; height:210px; cursor:pointer; }
+  .flip-inner{ position:relative; width:100%; height:100%; transition:transform .5s cubic-bezier(.4,.2,.2,1); transform-style:preserve-3d; }
+  .flip.on .flip-inner{ transform:rotateY(180deg); }
+  .flip-face{ position:absolute; inset:0; backface-visibility:hidden; border:1px solid var(--border); background:var(--bg-panel); padding:18px; display:flex; flex-direction:column; }
+  .flip-face .tag2{ font-size:.63rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.06em; }
+  .flip-face h4{ font-size:1rem; margin-top:8px; }
+  .flip-face .hint{ margin-top:auto; font-size:.66rem; }
+  .flip-back{ transform:rotateY(180deg); overflow-y:auto; }
+  .flip-back p{ font-size:.78rem; color:var(--text-dim); }
+  .flip-back .ex2{ margin-top:auto; font-size:.68rem; padding-top:8px; }
+  .version-tag{ display:inline-block; font-size:.63rem; padding:2px 8px; border:1px solid var(--border-soft); margin-top:8px; align-self:flex-start; }
+
+  .accent-gray .flip-face{ border-left:4px solid var(--gray); }
+  .accent-gray .hint{ color:var(--gray); }
+  .accent-gray .flip-back{ border-left:4px solid var(--gray); }
+  .accent-gray .ex2{ color:var(--gray); }
+  .accent-orange .flip-face{ border-left:4px solid var(--orange); }
+  .accent-orange .hint{ color:var(--orange); }
+  .accent-orange .flip-back{ border-left:4px solid var(--orange); }
+  .accent-orange .ex2{ color:var(--orange); }
+
+  .roles{ display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:30px; max-width:920px; }
+  @media (max-width:700px){ .roles{grid-template-columns:1fr;} }
+  .role-card{ background:var(--bg-panel); border:1px solid var(--border); border-top:3px solid var(--magenta); padding:22px; }
+  .role-card h4{ color:var(--magenta); font-size:1.02rem; }
+  .role-card p{ color:var(--text-dim); font-size:.85rem; margin-top:8px; }
+  .role-card .ex2{ margin-top:12px; font-size:.72rem; color:var(--text-dim); }
+
+  .flowdiag{ display:flex; align-items:center; gap:0; margin-top:34px; flex-wrap:wrap; }
+  .fnode{ background:var(--bg-panel); border:1px solid var(--border); padding:16px 20px; font-size:.78rem; text-align:center; min-width:140px; }
+  .fnode.mid{ border-color:var(--blue); color:var(--blue); font-weight:700; font-size:.92rem; }
+  .fline{ width:44px; height:1px; background:var(--border); position:relative; }
+  .fline::after{ content:'→'; position:absolute; right:-2px; top:-10px; color:var(--text-dim); }
+  @media (max-width:700px){ .flowdiag{flex-direction:column;} .fline{width:1px; height:30px;} .fline::after{content:'↓'; top:auto; bottom:-4px; right:-8px;} }
+
+  .phva{ display:flex; gap:12px; margin-top:34px; flex-wrap:wrap; align-items:center; }
+  .pcard{ background:var(--bg-panel); border:1px solid var(--border); padding:18px; width:170px; cursor:pointer; transition:.2s; }
+  .pcard:hover, .pcard.active{ border-color:var(--green); }
+  .pcard .letter{ font-size:1.8rem; color:var(--green); font-weight:800; }
+  .pcard .word{ font-size:.68rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em; margin-top:2px; }
+  .parrow{ color:var(--text-dim); }
+  .phva-detail{ margin-top:22px; max-width:66ch; color:var(--text-dim); font-size:.9rem; border-left:3px solid var(--green); padding-left:14px; }
+
+  .versus{ display:grid; grid-template-columns:1fr auto 1fr; gap:18px; margin-top:34px; max-width:860px; }
+  @media (max-width:700px){ .versus{grid-template-columns:1fr;} .versus .vs{display:none;} }
+  .vcard{ background:var(--bg-panel); border:1px solid var(--border); padding:22px; }
+  .vcard.p{ border-top:3px solid var(--orange); }
+  .vcard.q{ border-top:3px solid var(--green); }
+  .vcard h4{ font-size:1rem; }
+  .vcard p{ color:var(--text-dim); font-size:.83rem; margin-top:8px; }
+  .vcard .ex2{ margin-top:12px; font-size:.7rem; color:var(--text-dim); }
+  .vs{ align-self:center; color:var(--text-dim); font-size:.85rem; }
+
+  .quiz-wrap{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:28px; max-width:940px; }
+  @media (max-width:700px){ .quiz-wrap{grid-template-columns:1fr;} }
+  .qcol .qtitle{ font-size:.66rem; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim); margin-bottom:8px; }
+  .qitem{ background:var(--bg-panel); border:1px solid var(--border); padding:12px 14px; margin-bottom:8px; cursor:pointer; font-size:.8rem; transition:.15s; }
+  .qitem:hover{ border-color:var(--blue); }
+  .qitem.selected{ border-color:var(--magenta); }
+  .qitem.correct{ border-color:var(--green); color:var(--green); cursor:default; opacity:.75; }
+  .qitem.wrong{ animation:shake .3s; border-color:#c0392b; }
+  @keyframes shake{ 25%{transform:translateX(-6px);} 75%{transform:translateX(6px);} }
+  .quiz-status{ margin-top:18px; font-size:.8rem; color:var(--blue); }
+
+  .recap-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:8px; margin-top:28px; max-width:1180px; }
+  .recap-item{ border:1px solid var(--border-soft); padding:10px 12px; }
+  .recap-item .n{ font-size:.78rem; font-weight:700; }
+  .recap-item .d{ font-size:.7rem; color:var(--text-dim); margin-top:3px; }
+
+  footer{ padding:5vh 6vw 8vh; color:var(--text-dim); font-size:.68rem; }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<nav class="rail">
+  <div class="rail-head">
+    <div class="p1">$ marco --activo</div>
+    <div class="p2" id="railCurrentLabel">00_inicio<span class="cur"></span></div>
+  </div>
+  <div id="railItems"></div>
+</nav>
+
+<main>
+
+  <section id="hero">
+    <div class="eyebrow"><span class="tag">■</span> Taller interno · Areandina</div>
+    <div class="prompt">$ cat <span class="path">./areandina/cultura-de-procesos/marco-conceptual.md</span></div>
+    <h1>Cultura<br>de Procesos</h1>
+    <p class="hero-sub">Areandina es una institución multicampus: Bogotá, Pereira, Valledupar y más de 40 Centros de Servicio Universitario, con oferta presencial, virtual y a distancia. Eso solo funciona si todos hablamos el mismo idioma de procesos. Este es el marco conceptual, con ejemplos de nuestro día a día institucional.</p>
+    <div class="hero-meta">
+      <div><b>19</b>conceptos clave</div>
+      <div><b>06</b>capítulos</div>
+      <div><b>~30</b>minutos</div>
+    </div>
+    <div class="scroll-cue">↓ navega con el panel lateral o desliza</div>
+  </section>
+
+  <section id="cap1">
+    <div class="eyebrow">Capítulo 01 <span class="tag">// jerarquía</span></div>
+    <h2>De lo general a lo específico</h2>
+    <p class="lead">Todo en Areandina puede describirse en cuatro niveles de detalle, desde el proceso más amplio hasta la tarea más puntual. Haz clic en cada nivel.</p>
+    <div class="funnel">
+      <div class="fbox active" id="f0" data-i="0"><span>PROCESO</span></div>
+      <div class="farrow">⊃</div>
+      <div class="fbox" id="f1" data-i="1"><span>SUBPROCESO</span></div>
+      <div class="farrow">⊃</div>
+      <div class="fbox" id="f2" data-i="2"><span>PROCEDIMIENTO</span></div>
+      <div class="farrow">⊃</div>
+      <div class="fbox" id="f3" data-i="3"><span>ACTIVIDAD / TAREA</span></div>
+    </div>
+    <div class="panel detail-panel" id="funnelDetail"><div class="ptitle">detalle</div></div>
+  </section>
+
+  <section id="cap2">
+    <div class="eyebrow">Capítulo 02 <span class="tag">// documentación</span></div>
+    <h2>El expediente vivo</h2>
+    <p class="lead">Un proceso que solo vive en la cabeza de una persona no sobrevive a un cambio de sede, de cargo o de modalidad. Voltea cada tarjeta.</p>
+    <div class="grid" id="grid2"></div>
+  </section>
+
+  <section id="cap3">
+    <div class="eyebrow">Capítulo 03 <span class="tag">// roles</span></div>
+    <h2>Quién responde por qué</h2>
+    <p class="lead">Todo proceso tiene un responsable de que funcione, y un destinatario de su resultado — dentro y fuera de la institución.</p>
+    <div class="roles">
+      <div class="role-card">
+        <h4>Dueño de proceso</h4>
+        <p>Persona responsable de que el proceso funcione, se mida y se mejore, aunque muchas personas en distintas sedes ejecuten tareas dentro de él.</p>
+        <div class="ex2">EJ: el Director de Registro y Control Académico es dueño del proceso de matrícula, aunque lo ejecuten coordinadores en Bogotá, Pereira y Valledupar.</div>
+      </div>
+      <div class="role-card">
+        <h4>Cliente interno / externo</h4>
+        <p>Quien recibe la salida del proceso. Interno: otra área o proceso de la misma institución. Externo: alguien fuera de Areandina.</p>
+        <div class="ex2">EJ: Bienestar Universitario es cliente interno de Admisiones (recibe el listado de estudiantes nuevos para invitarlos a inducción); el estudiante matriculado es cliente externo de Registro Académico.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="cap4">
+    <div class="eyebrow">Capítulo 04 <span class="tag">// vista global</span></div>
+    <h2>Verlo para gestionarlo</h2>
+    <p class="lead">Todo proceso transforma algo. Y toda la institución, vista en conjunto, forma un mapa.</p>
+    <div class="flowdiag">
+      <div class="fnode">ENTRADAS<br><span style="color:var(--text-dim); font-size:.75em;">propuesta de proyecto de un docente</span></div>
+      <div class="fline"></div>
+      <div class="fnode mid">PROCESO<br><span style="font-size:.7em; font-weight:400;">Investigación</span></div>
+      <div class="fline"></div>
+      <div class="fnode">SALIDAS<br><span style="color:var(--text-dim); font-size:.75em;">proyecto aprobado o publicación</span></div>
+    </div>
+    <div class="panel detail-panel" style="margin-top:30px; border-left:3px solid var(--blue);">
+      <div class="ptitle">mapa de procesos</div>
+      <h3>Mapa de procesos</h3>
+      <div class="def">Representación gráfica de todos los procesos de la organización, agrupados en estratégicos, misionales/operativos y de apoyo, mostrando cómo se relacionan entre sí. Ayuda a que cualquier persona nueva entienda en un vistazo cómo encaja su área en el conjunto.</div>
+      <div class="ex"><b>Ejemplo</b>En el mapa de procesos de Areandina, Docencia, Investigación y Extensión son misionales; Admisiones, TI y Gestión Humana son de apoyo; Direccionamiento Estratégico y Aseguramiento de la Calidad son estratégicos.</div>
+    </div>
+  </section>
+
+  <section id="cap5">
+    <div class="eyebrow">Capítulo 05 <span class="tag">// control y riesgo</span></div>
+    <h2>Lo que sostiene el sistema</h2>
+    <p class="lead">Documentar no basta: hay que saber qué puede fallar, cómo se evita y qué se hace cuando falla igual. Esto es especialmente crítico en una institución acreditada en Alta Calidad Multicampus.</p>
+    <div class="grid" id="grid5"></div>
+  </section>
+
+  <section id="cap6">
+    <div class="eyebrow">Capítulo 06 <span class="tag">// mejora continua</span></div>
+    <h2>Que no se detenga</h2>
+    <p class="lead">Documentar un proceso no es el final, es el punto de partida para medirlo y mejorarlo. Explora el ciclo PHVA.</p>
+    <div class="phva">
+      <div class="pcard active" data-p="0"><div class="letter">P</div><div class="word">Planear</div></div>
+      <div class="parrow">→</div>
+      <div class="pcard" data-p="1"><div class="letter">H</div><div class="word">Hacer</div></div>
+      <div class="parrow">→</div>
+      <div class="pcard" data-p="2"><div class="letter">V</div><div class="word">Verificar</div></div>
+      <div class="parrow">→</div>
+      <div class="pcard" data-p="3"><div class="letter">A</div><div class="word">Actuar</div></div>
+      <div class="parrow">↻</div>
+    </div>
+    <div class="phva-detail" id="phvaDetail"></div>
+
+    <p class="lead" style="margin-top:44px;">Y este ciclo necesita un termómetro: el indicador.</p>
+    <div class="panel detail-panel" style="border-left:3px solid var(--green);">
+      <div class="ptitle">indicador</div>
+      <h3 style="color:var(--green);">Indicador de proceso (KPI)</h3>
+      <div class="def">Medida cuantificable que permite saber, con datos y no con percepciones, si el proceso está funcionando bien, y que sirve como insumo directo para el ciclo PHVA.</div>
+      <div class="ex"><b>Ejemplo</b>La tasa de deserción estudiantil en primer semestre, o el porcentaje de aspirantes que completa su proceso de matrícula sin necesitar ayuda presencial.</div>
+    </div>
+
+    <p class="lead" style="margin-top:44px;">Dos palabras que se confunden todo el tiempo:</p>
+    <div class="versus">
+      <div class="vcard p">
+        <h4>Política</h4>
+        <p>El "qué" y el "por qué". Un principio general que guía la actuación institucional.</p>
+        <div class="ex2">"Todo programa académico debe mantener vigente su registro calificado ante el Ministerio de Educación Nacional."</div>
+      </div>
+      <div class="vs">VS</div>
+      <div class="vcard q">
+        <h4>Procedimiento</h4>
+        <p>El "cómo". Los pasos concretos para cumplir esa política.</p>
+        <div class="ex2">Los pasos de autoevaluación, radicación y seguimiento que ejecuta Aseguramiento de la Calidad para renovar el registro calificado.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="cierre">
+    <div class="eyebrow">Cierre <span class="tag">// autoevaluación</span></div>
+    <h2>Pon a prueba lo que acabas de ver</h2>
+    <p class="lead">Haz clic en un término y luego en su definición. Si aciertan, quedan marcados.</p>
+    <div class="quiz-wrap">
+      <div class="qcol"><div class="qtitle">Término</div><div id="qTerms"></div></div>
+      <div class="qcol"><div class="qtitle">Definición</div><div id="qDefs"></div></div>
+    </div>
+    <div class="quiz-status" id="quizStatus">0 / 8 emparejados</div>
+
+    <p class="lead" style="margin-top:52px;">Referencia rápida — los 19 conceptos del marco:</p>
+    <div class="recap-grid" id="recapGrid"></div>
+  </section>
+
+  <footer>Cultura de Procesos — Marco conceptual · Taller interno · Fundación Universitaria del Área Andina</footer>
+</main>
+
+<script>
+const jerarquia = [
+  { t:"Proceso", def:"Conjunto de actividades interrelacionadas y secuenciales que reciben unas entradas, les agregan valor y entregan una salida útil para un cliente interno o externo. En una institución multicampus como Areandina, un proceso rara vez lo ejecuta una sola persona: cruza áreas, sedes y modalidades, por lo que necesita quedar documentado para que funcione igual en Bogotá, Pereira o Valledupar.", ex:"El \"Proceso de Admisión y Matrícula\": desde que un aspirante se contacta interesado en un programa, hasta que queda matriculado y con acceso al campus virtual." },
+  { t:"Subproceso", def:"Agrupación de actividades afines dentro de un proceso más grande. Resuelve una parte concreta del resultado final, pero todavía necesita varios pasos para completarse por sí solo.", ex:"Dentro de Admisión y Matrícula, el subproceso \"Verificación de documentos del aspirante\": diploma de bachiller, cédula y resultados de pruebas Saber 11." },
+  { t:"Procedimiento", def:"Descripción secuencial y detallada de cómo se ejecuta una actividad específica: quién es responsable, qué sistema o herramienta usa, en qué tiempo y bajo qué criterios de aprobación.", ex:"El procedimiento para validar el título de bachiller de un aspirante extranjero, que exige convalidación ante el Ministerio de Educación Nacional antes de aprobar la matrícula." },
+  { t:"Actividad / Tarea", def:"La acción concreta y puntual, el nivel más operativo del proceso. La ejecuta una persona en un momento determinado, sin que por sí sola constituya un resultado completo.", ex:"Cargar el escaneo de la cédula del aspirante en el sistema de información académico." },
+];
+
+const docs = [
+  { tag:"01", t:"Documentación", def:"Registrar por escrito, de forma clara y accesible, cómo se hacen las cosas, para que el conocimiento institucional no dependa de la memoria de una persona ni se pierda cuando alguien cambia de cargo o de sede.", ex:"El instructivo de \"Cómo registrar notas en el sistema académico\", igual para un docente nuevo en Bogotá, Pereira, Valledupar o en modalidad virtual.", v:null },
+  { tag:"02", t:"Manual de procesos", def:"Documento o conjunto de documentos que compila todos los procesos, subprocesos y procedimientos de la organización, generalmente integrado dentro del Sistema Integrado de Gestión (SIG).", ex:"El Manual del SIG de Areandina, que reúne los procesos misionales (Docencia, Investigación, Extensión), estratégicos y de apoyo de toda la institución multicampus.", v:null },
+  { tag:"03", t:"Actualización", def:"Revisar y modificar la documentación cuando cambia la forma de trabajar —una norma, un sistema, una decisión institucional— dejando registro de versiones para saber qué cambió, cuándo y por qué.", ex:"Cuando el Ministerio de Educación Nacional expide una nueva resolución sobre registro calificado, el procedimiento de autoevaluación de un programa pasa de v3.0 a v4.0.", v:"v3.0 → v4.0" },
+  { tag:"04", t:"Formato / Registro", def:"El formato es la plantilla vacía y estandarizada; el registro es esa misma plantilla ya diligenciada, con evidencia real de que la actividad ocurrió: fecha, firma y responsable.", ex:"El formato \"Solicitud de homologación de créditos\" está vacío hasta que el estudiante lo diligencia y lo firma: ahí se convierte en un registro que queda en su hoja de vida académica.", v:null },
+];
+
+const control = [
+  { tag:"05", t:"Caracterización del proceso", def:"Ficha síntesis, generalmente de una sola hoja, que reúne objetivo, alcance, entradas, salidas, proveedores, clientes, responsable, riesgos e indicadores de un proceso. Es lo primero que debería leer alguien nuevo para entender el proceso completo de un vistazo.", ex:"La caracterización del proceso de Bienestar Universitario resume su objetivo (favorecer la permanencia estudiantil), sus clientes (estudiantes de las tres sedes y de la modalidad virtual) y su indicador de participación." },
+  { tag:"06", t:"Riesgo de proceso", def:"Evento o situación que, si ocurre, impide que el proceso logre su objetivo o afecta la calidad de su resultado. Identificarlo a tiempo permite anticiparse en vez de apagar incendios.", ex:"En Aseguramiento de la Calidad, el riesgo de que un programa no actualice su autoevaluación a tiempo puede derivar en la pérdida del registro calificado ante el MEN." },
+  { tag:"07", t:"Punto de control", def:"Mecanismo diseñado dentro del procedimiento para evitar que un riesgo se materialice, o para detectarlo antes de que genere un impacto mayor sobre el proceso o sobre la institución.", ex:"La revisión trimestral del cumplimiento de las condiciones de calidad exigidas por el MEN es un punto de control frente al riesgo de perder el registro calificado de un programa." },
+  { tag:"08", t:"No conformidad / Acción correctiva", def:"La no conformidad es el hallazgo, normalmente en una auditoría interna o externa, de que algo no se hizo como estaba documentado. La acción correctiva es lo que se implementa para que no vuelva a ocurrir.", ex:"Una auditoría interna del SIG detecta que un programa no actualizó su syllabus según el nuevo currículo (no conformidad); se reentrena a los coordinadores curriculares (acción correctiva)." },
+];
+
+const phvaData = [
+  { l:"Planear", d:"Se identifica una oportunidad de mejora y se define qué cambiar y cómo medirlo. Ejemplo: se detecta alta deserción en primer semestre y se diseña un programa de tutorías de acompañamiento." },
+  { l:"Hacer", d:"Se implementa el cambio, normalmente a pequeña escala o de forma controlada. Ejemplo: el programa de tutorías se pilotea en una facultad antes de extenderlo a toda la institución." },
+  { l:"Verificar", d:"Se revisan los resultados frente al indicador definido. Ejemplo: ¿bajó realmente la tasa de deserción en la facultad piloto tras el programa de tutorías?" },
+  { l:"Actuar", d:"Si funcionó, se estandariza y se extiende a todas las facultades y sedes. Si no, se ajusta el diseño y el ciclo vuelve a Planear." },
+];
+
+const quizPairs = [
+  { t:"Dueño de proceso", d:"Responsable de que el proceso funcione, se mida y se mejore." },
+  { t:"Cliente interno", d:"Otra área de la institución que recibe la salida de un proceso." },
+  { t:"Indicador (KPI)", d:"Medida cuantificable del desempeño de un proceso." },
+  { t:"Política", d:"El principio general que explica el qué y el por qué de una actuación institucional." },
+  { t:"Mapa de procesos", d:"Representación gráfica de cómo se relacionan todos los procesos." },
+  { t:"Formato", d:"Plantilla vacía que, una vez diligenciada, se convierte en registro." },
+  { t:"Riesgo de proceso", d:"Evento que, si ocurre, impide lograr el objetivo del proceso." },
+  { t:"Punto de control", d:"Mecanismo que evita que un riesgo se materialice." },
+];
+
+const recap = [
+  ["Proceso","Transforma entradas en salidas de valor"],
+  ["Subproceso","Agrupación de actividades afines"],
+  ["Procedimiento","Pasos detallados de una actividad"],
+  ["Actividad / Tarea","Acción concreta y operativa"],
+  ["Documentación","Registrar por escrito el saber hacer"],
+  ["Manual de procesos","Compilado de todos los procesos (SIG)"],
+  ["Actualización","Revisar y versionar la documentación"],
+  ["Formato / Registro","Plantilla vs. plantilla diligenciada"],
+  ["Caracterización","Ficha síntesis de un proceso"],
+  ["Riesgo de proceso","Lo que puede impedir el objetivo"],
+  ["Punto de control","Mecanismo que evita el riesgo"],
+  ["No conformidad","Hallazgo de incumplimiento documental"],
+  ["Dueño de proceso","Responsable del funcionamiento"],
+  ["Cliente interno/externo","Quién recibe la salida"],
+  ["Mapa de procesos","Vista general de la institución"],
+  ["Entradas / Salidas","Lo que entra y lo que resulta"],
+  ["Indicador (KPI)","Medida de desempeño"],
+  ["Mejora continua (PHVA)","Planear · Hacer · Verificar · Actuar"],
+  ["Política vs. Procedimiento","El qué/por qué vs. el cómo"],
+];
+
+const chapters = [
+  {id:'hero', n:'00', label:'inicio'}, {id:'cap1', n:'01', label:'jerarquía'},
+  {id:'cap2', n:'02', label:'documentación'}, {id:'cap3', n:'03', label:'roles'},
+  {id:'cap4', n:'04', label:'vista global'}, {id:'cap5', n:'05', label:'control y riesgo'},
+  {id:'cap6', n:'06', label:'mejora continua'}, {id:'cierre', n:'✓', label:'cierre'}
+];
+const railItems = document.getElementById('railItems');
+chapters.forEach(c=>{
+  const el = document.createElement('div');
+  el.className='rail-item'; el.dataset.target=c.id;
+  el.innerHTML = `<span>[${c.n}]</span> ${c.label}`;
+  el.addEventListener('click', ()=> document.getElementById(c.id).scrollIntoView({behavior:'smooth'}));
+  railItems.appendChild(el);
+});
+const railEls = [...railItems.children];
+const railLabel = document.getElementById('railCurrentLabel');
+const obs = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      railEls.forEach(n=>n.classList.remove('active'));
+      const idx = chapters.findIndex(c=>c.id===e.target.id);
+      if(idx>-1){ railEls[idx].classList.add('active'); railLabel.innerHTML = chapters[idx].n+'_'+chapters[idx].label.replace(/ /g,'_')+'<span class="cur"></span>'; }
+    }
+  });
+}, {threshold:0.5});
+chapters.forEach(c=> obs.observe(document.getElementById(c.id)));
+
+function renderFunnelDetail(i){
+  const d = jerarquia[i];
+  document.getElementById('funnelDetail').innerHTML =
+    `<div class="ptitle">detalle</div><h3>${d.t}</h3><div class="def">${d.def}</div><div class="ex"><b>Ejemplo</b>${d.ex}</div>`;
+}
+document.querySelectorAll('.fbox').forEach(box=>{
+  box.addEventListener('click', ()=>{
+    document.querySelectorAll('.fbox').forEach(b=>b.classList.remove('active'));
+    box.classList.add('active'); renderFunnelDetail(+box.dataset.i);
+  });
+});
+renderFunnelDetail(0);
+
+function buildFlipGrid(containerId, items, accentClass){
+  const grid = document.getElementById(containerId);
+  items.forEach(item=>{
+    const el = document.createElement('div');
+    el.className = 'flip ' + accentClass;
+    el.innerHTML = `
+      <div class="flip-inner">
+        <div class="flip-face">
+          <div class="tag2">${item.tag}</div>
+          <h4>${item.t}</h4>
+          ${item.v ? `<div class="version-tag">${item.v}</div>` : ''}
+          <div class="hint">Clic para ver definición →</div>
+        </div>
+        <div class="flip-face flip-back">
+          <p>${item.def}</p>
+          <div class="ex2">EJ: ${item.ex}</div>
+        </div>
+      </div>`;
+    el.addEventListener('click', ()=> el.classList.toggle('on'));
+    grid.appendChild(el);
+  });
+}
+buildFlipGrid('grid2', docs, 'accent-gray');
+buildFlipGrid('grid5', control, 'accent-orange');
+
+function renderPhva(i){ document.getElementById('phvaDetail').textContent = phvaData[i].l + ' — ' + phvaData[i].d; }
+document.querySelectorAll('.pcard').forEach(card=>{
+  card.addEventListener('click', ()=>{
+    document.querySelectorAll('.pcard').forEach(c=>c.classList.remove('active'));
+    card.classList.add('active'); renderPhva(+card.dataset.p);
+  });
+});
+renderPhva(0);
+
+const qTermsEl = document.getElementById('qTerms');
+const qDefsEl = document.getElementById('qDefs');
+const shuffledDefs = [...quizPairs].sort(()=>Math.random()-0.5);
+let selectedTerm = null, matched = 0;
+quizPairs.forEach((p,idx)=>{
+  const el = document.createElement('div');
+  el.className='qitem'; el.textContent=p.t; el.dataset.idx=idx;
+  el.addEventListener('click', ()=>{
+    if(el.classList.contains('correct')) return;
+    document.querySelectorAll('#qTerms .qitem').forEach(x=>x.classList.remove('selected'));
+    el.classList.add('selected'); selectedTerm = idx;
+  });
+  qTermsEl.appendChild(el);
+});
+shuffledDefs.forEach(p=>{
+  const originalIdx = quizPairs.indexOf(p);
+  const el = document.createElement('div');
+  el.className='qitem'; el.textContent=p.d; el.dataset.idx=originalIdx;
+  el.addEventListener('click', ()=>{
+    if(el.classList.contains('correct') || selectedTerm===null) return;
+    if(+el.dataset.idx === selectedTerm){
+      el.classList.add('correct'); el.classList.remove('selected');
+      const termEl = qTermsEl.querySelector(`.qitem[data-idx="${selectedTerm}"]`);
+      termEl.classList.add('correct'); termEl.classList.remove('selected');
+      matched++;
+      document.getElementById('quizStatus').textContent =
+        matched===8 ? '¡Completado! 8 / 8 — dominas el marco conceptual.' : `${matched} / 8 emparejados`;
+    } else {
+      el.classList.add('wrong');
+      setTimeout(()=>el.classList.remove('wrong'), 300);
+    }
+    selectedTerm = null;
+    document.querySelectorAll('#qTerms .qitem').forEach(x=>x.classList.remove('selected'));
+  });
+  qDefsEl.appendChild(el);
+});
+
+const recapGrid = document.getElementById('recapGrid');
+recap.forEach(([n,d])=>{
+  const el = document.createElement('div');
+  el.className='recap-item';
+  el.innerHTML = `<div class="n">${n}</div><div class="d">${d}</div>`;
+  recapGrid.appendChild(el);
+});
+</script>
+</body>
+</html>
